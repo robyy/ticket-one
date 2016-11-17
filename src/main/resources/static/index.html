@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>React Search Event</title>
+    <script src="https://unpkg.com/react@15.3.0/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@15.3.0/dist/react-dom.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script src="https://unpkg.com/jquery@3.1.0/dist/jquery.min.js"></script>
+    <script src="https://unpkg.com/remarkable@1.7.1/dist/remarkable.min.js"></script>
+</head>
+<body>
+<div id="content"></div>
+<script type="text/babel">
+    var OuterBox = React.createClass({
+        getInitialState: function () {
+            return {loggedIn: false, searched: false, data: []};
+        },
+
+        handleLoginSubmit: function () {
+            this.setState({loggedIn: true});
+        },
+        handleSearchSubmit: function (record) {
+            var orders = this.state.data;
+
+            $.ajax({
+                url: this.props.url + record.startId + "/" + record.endId,
+                dataType: 'json',
+                type: 'GET',
+                data: record,
+                success: function (data) {
+                    console.log(this.props.url, record, data);
+                    this.setState({data: data, loggedIn: true, searched: true});
+                }.bind(this),
+                error: function (xhr, status, err) {
+                    this.setState({data: orders, loggedIn: true, searched: true});
+                    console.console.error(this.props.url, status, err.toString());
+                }.bind(this)
+            });
+
+            /*this.setState({loggedIn: true, searched: true});*/
+        },
+
+        render: function () {
+            if (!this.state.loggedIn) {
+                return (<LoginForm onLoginSubmit={this.handleLoginSubmit}/>);
+            } else if (!this.state.searched) {
+                return (<SearchForm onSearchSubmit={this.handleSearchSubmit}/>);
+            } else {
+                return (<SearchResultList data={this.state.data}/>);
+            }
+        }
+
+        /*
+         render: function () {
+         if(!this.state.searched) {
+         return (<SearchForm onSearchSubmit={this.handleSearchSubmit}/>);
+         } else {
+         return (<SearchResultList />);
+         }
+         }
+         */
+    });
+
+    var LoginForm = React.createClass({
+        handleSubmit: function (e) {
+            e.preventDefault();
+            this.props.onLoginSubmit(); // can pass value here;
+        },
+
+        render: function () {
+            return (
+
+                    <form className="loginForm" onSubmit={this.handleSubmit}>
+                        <h2>Login</h2>
+                        <input
+                                type="text"
+                                placeholder="Username"
+                        />
+                        <br />
+                        <input
+                                type="text"
+                                placeholder="Password"
+
+                        />
+                        <br />
+                        <input type="submit" value="Login"/>
+                    </form>
+            );
+        }
+    });
+
+    var SearchForm = React.createClass({
+        getInitialState: function () {
+            return {startId: '', endId: ''};
+        },
+
+        handleStartIdChange: function (e) {
+            this.setState({startId: e.target.value});
+        },
+
+        handleEndIdChange: function (e) {
+            this.setState({endId: e.target.value});
+        },
+
+        handleSubmit: function (e) {
+            e.preventDefault();
+            var startId = this.state.startId.trim();
+            var endId = this.state.endId.trim();
+            if (!startId || !endId) {
+                return;
+            }
+            this.props.onSearchSubmit({startId: startId, endId: endId});
+            /*this.setState({startId: '', endId: ''});*/
+        },
+
+        render: function () {
+            return (
+                    <form className="searchForm" onSubmit={this.handleSubmit}>
+                        <h2>Search</h2>
+                        <p>Search for events between ID</p>
+                        <input
+                                type="text"
+                                placeholder="Event ID Start"
+                                value={this.state.startId}
+                                onChange={this.handleStartIdChange}
+                        />
+                        <br />
+                        <input
+                                type="text"
+                                placeholder="Event ID End"
+                                value={this.state.endId}
+                                onChange={this.handleEndIdChange}
+
+                        />
+                        <br />
+                        <input type="submit" value="Search"/>
+                    </form>
+            );
+        }
+    });
+
+    var SearchResultList = React.createClass({
+        render: function () {
+            console.log(this.props.data, this.props.data.orders);
+            var orderNodes = this.props.data.orders.map(function (order) {
+                return (
+                        <Record key={order.orderID} eventId={order.eventID} userName={order.userName} qty={order.qty}>
+                        </Record>
+                );
+            });
+
+            return (
+                    <div className="recordList">
+                        <p>Event ID, Customer,      Tickets</p>
+                        {orderNodes}
+                    </div>
+            );
+        }
+    });
+
+    var Record = React.createClass({
+
+        render: function () {
+            return (
+                    <div className="record">
+                        <p>{this.props.eventId}, {this.props.userName}, {this.props.qty}</p>
+                    </div>
+            );
+        }
+    });
+
+    ReactDOM.render(
+            <OuterBox url="http://localhost:8080/api/v1/orders/"/>,
+            document.getElementById('content')
+    );
+</script>
+</body>
+</html>
